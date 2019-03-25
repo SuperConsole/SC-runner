@@ -1,0 +1,9 @@
+*デプロイ前に行うこと
+    $./node_modules/.bin/babel ./runner/game-dev.js --presets es2015 --out-file ./runner/script.js
+
+index.html:
+    <!--<script src = "script.js" ></script>-->
+    <script src = "game-dev.js" ></script>
+                             ↓
+    <script src = "script.js" ></script>
+    <!--<script src = "game-dev.js" ></script>-->
