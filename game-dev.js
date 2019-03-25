@@ -1,17 +1,17 @@
 let game;
 
 let config = {
-    platformSpeedRange: [500, 500],
-    spawnRange: [80, 300],
-    platformSizeRange: [90, 300],
+    platformSpeedRange: [700, 700],
+    spawnRange: [100, 800],
+    platformSizeRange: [200, 500],
     platformHeightRange: [-5, 5],
     platformHeighScale: 20,
     platformVerticalLimit: [0.4, 0.8],
     playerGravity: 980,
-    jumpForce: 340,
+    jumpForce: 300,
     playerStartPosition: 200,
-    jumps: 3,
-    coinPercent: 30
+    jumps: 8,
+    coinPercent: 20
 }
 
 window.onload = function() {
@@ -99,6 +99,9 @@ class playGame extends Phaser.Scene{
                 coin.scene.coinGroup.add(coin)
             }
         });
+        this.gameScore =0;
+        this.printGameScore = this.add.text(32, 32, 'score: 0', { fontSize: '32px', fill: '#fff' });
+        this.acceleration=0;
         this.playerJumps = 0;
         this.addPlatform(game.config.width, game.config.width / 2, game.config.height * config.platformVerticalLimit[1]);
         this.player = this.physics.add.sprite(config.playerStartPosition, game.config.height * 0.7, "player");
@@ -121,6 +124,8 @@ class playGame extends Phaser.Scene{
                     this.coinGroup.remove(coin);
                 }
             });
+            this.gameScore+=300;
+            this.printGameScore.setText('Score: ' + this.gameScore);
         }, null, this);
         this.input.on("pointerdown", this.jump, this);
     }
@@ -142,10 +147,14 @@ class playGame extends Phaser.Scene{
             platform = this.add.tileSprite(posX, posY, platformWidth, 32, "platform");
             this.physics.add.existing(platform);
             platform.body.setImmovable(true);
-            platform.body.setVelocityX(Phaser.Math.Between(config.platformSpeedRange[0], config.platformSpeedRange[1]) * -1);
+
+            if(this.gameScore%1000==0){
+                this.acceleration=this.gameScore/20;
+            }
+            platform.body.setVelocityX(Phaser.Math.Between(config.platformSpeedRange[0]+this.acceleration*2, config.platformSpeedRange[1]+this.acceleration*2) * -1);
             this.platformGroup.add(platform);
         }
-        this.nextPlatformDistance = Phaser.Math.Between(config.spawnRange[0], config.spawnRange[1]);
+        this.nextPlatformDistance = Phaser.Math.Between(config.spawnRange[0]+this.acceleration, config.spawnRange[1]+this.acceleration*1.3);
         if(this.addedPlatforms > 1){
             if(Phaser.Math.Between(1, 100) <= config.coinPercent){
                 if(this.coinPool.getLength()){
@@ -169,7 +178,7 @@ class playGame extends Phaser.Scene{
     }
 
     jump(){
-        if(this.player.body.touching.down || (this.playerJumps > 0 && this.playerJumps < config.jumps)){
+        if(this.player.body.touching.down || this.playerJumps < config.jumps){
             if(this.player.body.touching.down){
                 this.playerJumps = 0;
             }
@@ -181,12 +190,12 @@ class playGame extends Phaser.Scene{
 
     update(){
         if(this.player.y > game.config.height){
-            alert("Game OVER!");
             this.scene.start("PlayGame");
         }
+        this.gameScore++;
+        this.printGameScore.setText('Score: ' + this.gameScore);
         this.player.x = config.playerStartPosition;
 
-        // recycling platforms
         let minDistance = game.config.width;
         let rightmostPlatformHeight = 0;
         this.platformGroup.getChildren().forEach(function(platform){
@@ -201,7 +210,6 @@ class playGame extends Phaser.Scene{
             }
         }, this);
 
-        // recycling coins
         this.coinGroup.getChildren().forEach(function(coin){
             if(coin.x < - coin.displayWidth / 2){
                 this.coinGroup.killAndHide(coin);
@@ -209,9 +217,8 @@ class playGame extends Phaser.Scene{
             }
         }, this);
 
-        // adding new platforms
         if(minDistance > this.nextPlatformDistance){
-            let nextPlatformWidth = Phaser.Math.Between(config.platformSizeRange[0], config.platformSizeRange[1]);
+            let nextPlatformWidth = Phaser.Math.Between(config.platformSizeRange[0]-this.acceleration, config.platformSizeRange[1]-this.acceleration);
             let platformRandomHeight = config.platformHeighScale * Phaser.Math.Between(config.platformHeightRange[0], config.platformHeightRange[1]);
             let nextPlatformGap = rightmostPlatformHeight + platformRandomHeight;
             let minPlatformHeight = game.config.height * config.platformVerticalLimit[0];
