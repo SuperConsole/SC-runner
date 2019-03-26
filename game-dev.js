@@ -66,7 +66,7 @@ class preloadGame extends Phaser.Scene{
             yoyo: true,
             repeat: -1
         });
-
+        alert("Enterで開始");
         this.scene.start("PlayGame");
     }
 }

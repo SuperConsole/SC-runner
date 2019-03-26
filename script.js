@@ -11,24 +11,24 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 var game = void 0;
 
 var config = {
-    platformSpeedRange: [300, 300],
-    spawnRange: [80, 300],
-    platformSizeRange: [90, 300],
+    platformSpeedRange: [700, 750],
+    spawnRange: [100, 800],
+    platformSizeRange: [100, 500],
     platformHeightRange: [-5, 5],
     platformHeighScale: 20,
     platformVerticalLimit: [0.4, 0.8],
     playerGravity: 980,
     jumpForce: 350,
     playerStartPosition: 200,
-    jumps: 5,
-    coinPercent: 30
+    jumps: 8,
+    coinPercent: 25
 };
 
 window.onload = function () {
     var g_conf = {
         type: Phaser.AUTO,
-        width: 1334,
-        height: 750,
+        width: 1920,
+        height: 1080,
         scene: [preloadGame, playGame],
         backgroundColor: 0x000000,
         physics: {
@@ -54,14 +54,10 @@ var preloadGame = function (_Phaser$Scene) {
         key: "preload",
         value: function preload() {
             this.load.image("platform", "platform.png");
-
-            // player is a sprite sheet made by 24x48 pixels
             this.load.spritesheet("player", "player.png", {
                 frameWidth: 24,
                 frameHeight: 48
             });
-
-            // the coin is a sprite sheet made by 20x20 pixels
             this.load.spritesheet("coin", "coin.png", {
                 frameWidth: 20,
                 frameHeight: 20
@@ -89,7 +85,7 @@ var preloadGame = function (_Phaser$Scene) {
                 yoyo: true,
                 repeat: -1
             });
-
+            alert("Enterで開始");
             this.scene.start("PlayGame");
         }
     }]);
@@ -109,66 +105,40 @@ var playGame = function (_Phaser$Scene2) {
     _createClass(playGame, [{
         key: "create",
         value: function create() {
-
-            // keeping track of added platforms
+            this.DEBUG;
             this.addedPlatforms = 0;
-
-            // group with all active platforms.
             this.platformGroup = this.add.group({
-
-                // once a platform is removed, it's added to the pool
                 removeCallback: function removeCallback(platform) {
                     platform.scene.platformPool.add(platform);
                 }
             });
-
-            // platform pool
             this.platformPool = this.add.group({
-
-                // once a platform is removed from the pool, it's added to the active platforms group
                 removeCallback: function removeCallback(platform) {
                     platform.scene.platformGroup.add(platform);
                 }
             });
-
-            // group with all active coins.
             this.coinGroup = this.add.group({
-
-                // once a coin is removed, it's added to the pool
                 removeCallback: function removeCallback(coin) {
                     coin.scene.coinPool.add(coin);
                 }
             });
-
-            // coin pool
             this.coinPool = this.add.group({
-
-                // once a coin is removed from the pool, it's added to the active coins group
                 removeCallback: function removeCallback(coin) {
                     coin.scene.coinGroup.add(coin);
                 }
             });
-
-            // number of consecutive jumps made by the player so far
+            this.gameScore = 0;
+            this.printGameScore = this.add.text(32, 32, 'score: 0', { fontSize: '32px', fill: '#fff' });
+            this.acceleration = 0;
             this.playerJumps = 0;
-
-            // adding a platform to the game, the arguments are platform width, x position and y position
-            this.addPlatform(game.config.width, game.config.width / 2, game.config.height * config.platformVerticalLimit[1]);
-
-            // adding the player;
+            this.addPlatform(game.config.width, game.config.width / 2, game.config.height * config.platformVerticalLimit[1], 0);
             this.player = this.physics.add.sprite(config.playerStartPosition, game.config.height * 0.7, "player");
             this.player.setGravityY(config.playerGravity);
-
-            // setting collisions between the player and the platform group
             this.physics.add.collider(this.player, this.platformGroup, function () {
-
-                // play "run" animation if the player is on a platform
                 if (!this.player.anims.isPlaying) {
                     this.player.anims.play("run");
                 }
             }, null, this);
-
-            // setting collisions between the player and the coin group
             this.physics.add.overlap(this.player, this.coinGroup, function (player, coin) {
                 this.tweens.add({
                     targets: coin,
@@ -182,23 +152,21 @@ var playGame = function (_Phaser$Scene2) {
                         this.coinGroup.remove(coin);
                     }
                 });
+                this.gameScore += 100;
+                this.printGameScore.setText('Score: ' + this.gameScore);
             }, null, this);
-
-            // checking for input
             this.input.on("pointerdown", this.jump, this);
         }
-
-        // the core of the script: platform are added from the pool or created on the fly
-
     }, {
         key: "addPlatform",
-        value: function addPlatform(platformWidth, posX, posY) {
+        value: function addPlatform(platformWidth, posX, posY, acceleration) {
             this.addedPlatforms++;
             var platform = void 0;
             if (this.platformPool.getLength()) {
                 platform = this.platformPool.getFirst();
                 platform.x = posX;
                 platform.y = posY;
+                platform.body.setVelocityX(Phaser.Math.Between(config.platformSpeedRange[0], config.platformSpeedRange[1]) * -1 - acceleration);
                 platform.active = true;
                 platform.visible = true;
                 this.platformPool.remove(platform);
@@ -208,12 +176,10 @@ var playGame = function (_Phaser$Scene2) {
                 platform = this.add.tileSprite(posX, posY, platformWidth, 32, "platform");
                 this.physics.add.existing(platform);
                 platform.body.setImmovable(true);
-                platform.body.setVelocityX(Phaser.Math.Between(config.platformSpeedRange[0], config.platformSpeedRange[1]) * -1);
+                platform.body.setVelocityX(Phaser.Math.Between(config.platformSpeedRange[0], config.platformSpeedRange[1]) * -1 - acceleration);
                 this.platformGroup.add(platform);
             }
             this.nextPlatformDistance = Phaser.Math.Between(config.spawnRange[0], config.spawnRange[1]);
-
-            // is there a coin over the platform?
             if (this.addedPlatforms > 1) {
                 if (Phaser.Math.Between(1, 100) <= config.coinPercent) {
                     if (this.coinPool.getLength()) {
@@ -221,6 +187,7 @@ var playGame = function (_Phaser$Scene2) {
                         coin.x = posX;
                         coin.y = posY - 96;
                         coin.alpha = 1;
+                        coin.setVelocityX(platform.body.velocity.x);
                         coin.active = true;
                         coin.visible = true;
                         this.coinPool.remove(coin);
@@ -234,34 +201,30 @@ var playGame = function (_Phaser$Scene2) {
                 }
             }
         }
-
-        // the player jumps when on the ground, or once in the air as long as there are jumps left and the first jump was on the ground
-
     }, {
         key: "jump",
         value: function jump() {
-            if (this.player.body.touching.down || this.playerJumps > 0 && this.playerJumps < config.jumps) {
+            if (this.player.body.touching.down || this.playerJumps < config.jumps) {
                 if (this.player.body.touching.down) {
                     this.playerJumps = 0;
                 }
                 this.player.setVelocityY(config.jumpForce * -1);
                 this.playerJumps++;
-
-                // stops animation
                 this.player.anims.stop();
             }
         }
     }, {
         key: "update",
         value: function update() {
-
-            // game over
             if (this.player.y > game.config.height) {
                 this.scene.start("PlayGame");
             }
+            this.printGameScore.setText('Score: ' + this.gameScore + ", DEBUG: " + this.DEBUG);
             this.player.x = config.playerStartPosition;
-
-            // recycling platforms
+            if (this.gameScore % 1000 < 100) {
+                //100 acceleration per 1000 score.
+                this.acceleration = this.gameScore / 10;
+            }
             var minDistance = game.config.width;
             var rightmostPlatformHeight = 0;
             this.platformGroup.getChildren().forEach(function (platform) {
@@ -276,7 +239,6 @@ var playGame = function (_Phaser$Scene2) {
                 }
             }, this);
 
-            // recycling coins
             this.coinGroup.getChildren().forEach(function (coin) {
                 if (coin.x < -coin.displayWidth / 2) {
                     this.coinGroup.killAndHide(coin);
@@ -284,15 +246,16 @@ var playGame = function (_Phaser$Scene2) {
                 }
             }, this);
 
-            // adding new platforms
             if (minDistance > this.nextPlatformDistance) {
-                var nextPlatformWidth = Phaser.Math.Between(config.platformSizeRange[0], config.platformSizeRange[1]);
+                var nextPlatformWidth = Phaser.Math.Between(config.platformSizeRange[0], config.platformSizeRange[1] - this.acceleration / 5);
+                if (nextPlatformWidth < 100) nextPlatformWidth = 100;
                 var platformRandomHeight = config.platformHeighScale * Phaser.Math.Between(config.platformHeightRange[0], config.platformHeightRange[1]);
                 var nextPlatformGap = rightmostPlatformHeight + platformRandomHeight;
                 var minPlatformHeight = game.config.height * config.platformVerticalLimit[0];
                 var maxPlatformHeight = game.config.height * config.platformVerticalLimit[1];
                 var nextPlatformHeight = Phaser.Math.Clamp(nextPlatformGap, minPlatformHeight, maxPlatformHeight);
-                this.addPlatform(nextPlatformWidth, game.config.width + nextPlatformWidth / 2, nextPlatformHeight);
+                this.gameScore += 50;
+                this.addPlatform(nextPlatformWidth, game.config.width + nextPlatformWidth / 2, nextPlatformHeight, this.acceleration);
             }
         }
     }]);
