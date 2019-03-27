@@ -12,22 +12,22 @@ var game = void 0;
 
 var config = {
     platformSpeedRange: [700, 750],
-    spawnRange: [100, 800],
+    spawnRange: [100, 500],
     platformSizeRange: [100, 500],
     platformHeightRange: [-5, 5],
     platformHeighScale: 20,
     platformVerticalLimit: [0.4, 0.8],
     playerGravity: 980,
-    jumpForce: 350,
+    jumpForce: 370,
     playerStartPosition: 200,
     jumps: 8,
-    coinPercent: 25
+    coinPercent: 20
 };
 
 window.onload = function () {
     var g_conf = {
         type: Phaser.AUTO,
-        width: 1920,
+        width: 1900,
         height: 1080,
         scene: [preloadGame, playGame],
         backgroundColor: 0x000000,
@@ -217,6 +217,7 @@ var playGame = function (_Phaser$Scene2) {
         key: "update",
         value: function update() {
             if (this.player.y > game.config.height) {
+                alert('Score: ' + this.gameScore);
                 this.scene.start("PlayGame");
             }
             this.printGameScore.setText('Score: ' + this.gameScore + ", DEBUG: " + this.DEBUG);
@@ -248,7 +249,7 @@ var playGame = function (_Phaser$Scene2) {
 
             if (minDistance > this.nextPlatformDistance) {
                 var nextPlatformWidth = Phaser.Math.Between(config.platformSizeRange[0], config.platformSizeRange[1] - this.acceleration / 5);
-                if (nextPlatformWidth < 100) nextPlatformWidth = 100;
+                if (nextPlatformWidth < 100 + this.acceleration / 50) nextPlatformWidth = 100 + this.acceleration / 50;
                 var platformRandomHeight = config.platformHeighScale * Phaser.Math.Between(config.platformHeightRange[0], config.platformHeightRange[1]);
                 var nextPlatformGap = rightmostPlatformHeight + platformRandomHeight;
                 var minPlatformHeight = game.config.height * config.platformVerticalLimit[0];
